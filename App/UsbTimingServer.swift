@@ -35,12 +35,14 @@ final class UsbTimingServer {
 
     // Caller captured handler time on the main thread before drawing. Enqueue
     // AFTER changing the visual; transport never blocks the touch handler.
-    func touch(session: String, sequence: UInt64, handlerTime: Double, white: Bool, mode: String) {
+    func touch(session: String, sequence: UInt64, handlerTime: Double, white: Bool, mode: String,
+               details: [String: Any] = [:]) {
         queue.async {
             self.state = ["type": "hello", "version": 2, "session": session,
                           "sequence": sequence, "white": white, "mode": mode]
-            let event: [String: Any] = ["type": "touch", "session": session,
+            var event: [String: Any] = ["type": "touch", "session": session,
                 "sequence": sequence, "handlerTime": handlerTime, "white": white, "mode": mode]
+            event.merge(details) { existing, _ in existing }
             for id in Array(self.clients.keys) { self.send(event, to: id) }
         }
     }

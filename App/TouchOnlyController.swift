@@ -1,17 +1,37 @@
 import UIKit
 import QuartzCore
 
+// Observe the existing event path without changing event dispatch or drawing.
+final class TouchTimingWindow: UIWindow {
+    private(set) var dispatchTime: Double?
+    override func sendEvent(_ event: UIEvent) {
+        dispatchTime = CACurrentMediaTime()
+        defer { dispatchTime = nil }
+        super.sendEvent(event)
+    }
+}
+
 // A real HID touch must enter UIKit. Network telemetry cannot synthesize a
 // touch. The static surface does not draw, animate, or change color per sample.
 final class TouchOnlySurface: UIView {
     let session = UUID().uuidString
     private(set) var sequence: UInt64 = 0
-    var down: ((String, UInt64, Double) -> Void)?
+    var down: ((String, UInt64, Double, [String: Any]) -> Void)?
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         let handlerTime = CACurrentMediaTime()
         sequence &+= 1
-        down?(session, sequence, handlerTime)
+        var details: [String: Any] = ["touchCount": touches.count, "appVersion": "1.3.0"]
+        if let touch = touches.first {
+            let point = touch.location(in: self)
+            details["touchTimestamp"] = touch.timestamp
+            details["touchType"] = touch.type.rawValue
+            details["normalizedX"] = Double(point.x / max(1, bounds.width))
+            details["normalizedY"] = Double(point.y / max(1, bounds.height))
+        }
+        if let event = event { details["eventTimestamp"] = event.timestamp }
+        if let time = (window as? TouchTimingWindow)?.dispatchTime { details["windowDispatchTime"] = time }
+        down?(session, sequence, handlerTime, details)
     }
 }
 
@@ -46,9 +66,9 @@ final class TouchOnlyController: UIViewController {
             label.leadingAnchor.constraint(greaterThanOrEqualTo: surface.safeAreaLayoutGuide.leadingAnchor, constant: 24),
             label.trailingAnchor.constraint(lessThanOrEqualTo: surface.safeAreaLayoutGuide.trailingAnchor, constant: -24)
         ])
-        surface.down = { [weak self] session, sequence, time in
+        surface.down = { [weak self] session, sequence, time, details in
             self?.telemetry.touch(session: session, sequence: sequence,
-                                  handlerTime: time, white: false, mode: "touch-only")
+                                  handlerTime: time, white: false, mode: "touch-only", details: details)
         }
         telemetry.start(session: surface.session, sequence: 0, white: false, mode: "touch-only")
     }
