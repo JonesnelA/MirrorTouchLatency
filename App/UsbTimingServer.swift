@@ -12,10 +12,11 @@ final class UsbTimingServer {
     private var state: [String: Any] = [:]
     var statusChanged: ((String) -> Void)?
 
-    func start(session: String, sequence: UInt64, white: Bool, mode: String = "tap") {
+    func start(session: String, sequence: UInt64, white: Bool, mode: String = "tap", details: [String: Any] = [:]) {
         queue.async {
             self.state = ["type": "hello", "version": 2, "session": session,
                           "sequence": sequence, "white": white, "mode": mode]
+                .merging(details) { first, _ in first }
             do {
                 let tcp = NWProtocolTCP.Options()
                 tcp.noDelay = true
@@ -33,6 +34,13 @@ final class UsbTimingServer {
         }
     }
 
+    func updateDetails(_ details: [String: Any]) {
+        queue.async {
+            let reserved: Set<String> = ["type", "version", "session", "sequence", "white", "mode"]
+            for (key, value) in details where !reserved.contains(key) { self.state[key] = value }
+        }
+    }
+
     // Caller captured handler time on the main thread before drawing. Enqueue
     // AFTER changing the visual; transport never blocks the touch handler.
     func touch(session: String, sequence: UInt64, handlerTime: Double, white: Bool, mode: String,
@@ -40,6 +48,7 @@ final class UsbTimingServer {
         queue.async {
             self.state = ["type": "hello", "version": 2, "session": session,
                           "sequence": sequence, "white": white, "mode": mode]
+                .merging(details) { first, _ in first }
             var event: [String: Any] = ["type": "touch", "session": session,
                 "sequence": sequence, "handlerTime": handlerTime, "white": white, "mode": mode]
             event.merge(details) { existing, _ in existing }

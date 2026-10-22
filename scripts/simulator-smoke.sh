@@ -28,6 +28,10 @@ xcrun simctl terminate "$device" com.mirrortest.latency
 xcrun simctl launch "$device" com.mirrortest.latency
 sleep 3
 python3 scripts/test-usb-protocol.py --touch-only
+xcrun simctl terminate "$device" com.mirrortest.latency
+xcrun simctl launch "$device" com.mirrortest.latency --touch-display-link
+sleep 3
+python3 scripts/test-usb-protocol.py --touch-only --display-link
 xcrun simctl io "$device" screenshot dist/iPad-launch.png
 xcrun simctl spawn "$device" launchctl list | grep -F 'com.mirrortest.latency' > dist/simulator-process.txt
 python3 -c 'from pathlib import Path; rows=Path("dist/simulator-process.txt").read_text().splitlines(); assert any(r.split()[0].isdigit() and int(r.split()[0])>0 for r in rows), "App exited after launch"; print("PASS iPad simulator app remains running")'

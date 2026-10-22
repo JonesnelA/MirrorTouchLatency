@@ -1,13 +1,11 @@
-# 纯触摸延迟自动测试（1.2）
+# Pure touch timing test 1.4
 
-默认打开纯触摸测试：整个前台页面接收真实 USB HID 触摸，在 `touchesBegan` 入口记录 `CACurrentMediaTime()`，通过仅监听设备回环地址的 47091 端口回报。每次触摸不变色、不绘制、不等待画面或松手。网络只接收校时请求，不生成触摸。
+Unsigned iPhone/iPad test App. The default static surface records the original touchesBegan entry time for real HID touches; no per-touch drawing, animation, release wait, or video measurement is used. Read-only clock/touch telemetry listens only on device loopback port 47091 through USB mux. Network messages cannot generate touches.
 
-电脑自动打开 App、校时、逐次发送真实触摸并核对会话与连续编号，无需 F8。起点是电脑调用 USB HID 发送函数前的单调时间，终点是设备处理触摸的单调时间；通过四时间戳校时求单向延迟上下界，不把回执抵达时间或发送完成时间当作触摸执行时间。结果不包含键盘映射、采集、编码、画面回传、解码或显示延迟。终点代表测试 App 开始处理触摸，不代表其他游戏完成内部逻辑。
+The optional launch argument --touch-display-link enables continuous CADisplayLink callbacks and requests the screen maximum frame rate. It is an experiment to compare event dispatch against the static control, not a proven optimization. The callback does no drawing and cannot manufacture touch events. The formal touch timing endpoint stays unchanged. Metadata reports maximum screen FPS, observed display-link interval and timestamps, power mode and thermal state. This App-only experiment makes no claim about other applications or games.
 
-跨设备校时保留传输不对称误差，并使用 100 ppm 相对漂移上界。全部原始时间与失败样本随报告保存；该范围依赖非负传输时间及漂移假设。
+The legacy visual test is available with --visual-test and must not be confused with pure touch timing. App 1.3 added separate UITouch/UIEvent/window dispatch timestamps; these remain diagnostic stages and never replace the touchesBegan endpoint.
 
-IPA 未签名，需用自己的有效证书签名安装。默认 bundle identifier 是 `com.mirrortest.latency`；重签名改变标识时，电脑工具必须传入实际 bundle identifier。保持设备已解锁并信任电脑、开发者模式及有线控制所需 DDI 已可用。
+GitHub Actions builds the arm64 unsigned IPA and launches the visual, static and display-link modes on an iPad simulator. Simulator checks validate the real read-only loopback protocol and active callback metadata; they do not claim real-device touch latency. Sign and install with your own valid credentials. Original bundle identifier: com.mirrortest.latency.
 
-旧画面测试保留为命令行启动参数 `--visual-test`，不能用它的结果代替纯触摸测试结果。
-
-公开构建项目只包含本测试 App、必要构建/验证脚本和说明，不包含同屏私有工程、设备身份、配置、证书或历史报告。
+This public repository contains only the test App and its build/validation scripts. It contains no private mirroring source, device identifiers, user configuration, signing credentials, or real-device reports.

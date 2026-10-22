@@ -21,6 +21,16 @@ def connected():
     assert hello["type"] == "hello" and hello["version"] == 2
     assert hello["sequence"] == 0 and hello["white"] is False and hello["mode"] == mode
     assert len(hello["session"]) == 36
+    if mode == 'touch-only':
+        active = '--display-link' in sys.argv
+        assert hello['appVersion'] == '1.4.0'
+        assert hello['eventLoopMode'] == ('display-link' if active else 'static')
+        assert isinstance(hello['screenMaximumFPS'], int) and hello['screenMaximumFPS'] > 0
+        if active:
+            assert hello['displayLinkActive'] is True and hello['displayLinkCallbackCount'] >= 8
+            assert 0 < hello['displayLinkFrameIntervalMs'] < 1000
+        else:
+            assert hello['displayLinkActive'] is False and hello['displayLinkCallbackCount'] == 0
     return sock, stream, hello
 
 
