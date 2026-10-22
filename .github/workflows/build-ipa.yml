@@ -1,0 +1,24 @@
+name: Build unsigned test IPA
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build arm64 iPhone and iPad app
+        run: bash scripts/build-ipa.sh
+      - name: Verify app launches on iPad simulator
+        run: bash scripts/simulator-smoke.sh
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: MirrorLatency-unsigned-IPA
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
